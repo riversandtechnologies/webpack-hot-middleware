@@ -1,7 +1,7 @@
 module.exports = webpackHotMiddleware;
 
 var helpers = require('./helpers');
-var pathMatch = helpers.pathMatch;
+//var pathMatch = helpers.pathMatch;
 
 function webpackHotMiddleware(compiler, opts) {
   opts = opts || {};
@@ -33,10 +33,10 @@ function webpackHotMiddleware(compiler, opts) {
     latestStats = statsResult;
     publishStats('built', latestStats, eventStream, opts.log);
   }
-  var middleware = function(req, res, next) {
-    if (closed) return next();
-    if (!pathMatch(req.url, opts.path)) return next();
-    eventStream.handler(req, res);
+  var middleware = function(ws, next) {
+    if (closed) return;
+    //if (!pathMatch(req.url, opts.path)) return next();
+    eventStream.handler(ws);
     if (latestStats) {
       // Explicitly not passing in `log` fn as we don't want to log again on
       // the server
@@ -67,48 +67,48 @@ function createEventStream(heartbeat) {
     });
   }
   var interval = setInterval(function heartbeatTick() {
-    everyClient(function(client) {
-      client.write('data: \uD83D\uDC93\n\n');
+    everyClient(function(client) { 
+      client.send('\uD83D\uDC93');
     });
   }, heartbeat).unref();
   return {
     close: function() {
       clearInterval(interval);
       everyClient(function(client) {
-        if (!client.finished) client.end();
+        if (!client.finished) client.close();
       });
       clients = {};
     },
-    handler: function(req, res) {
-      var headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Content-Type': 'text/event-stream;charset=utf-8',
-        'Cache-Control': 'no-cache, no-transform',
-        // While behind nginx, event stream should not be buffered:
-        // http://nginx.org/docs/http/ngx_http_proxy_module.html#proxy_buffering
-        'X-Accel-Buffering': 'no',
-      };
+    handler: function(ws) {
+    //   var headers = {
+    //     'Access-Control-Allow-Origin': '*',
+    //     'Content-Type': 'text/event-stream;charset=utf-8',
+    //     'Cache-Control': 'no-cache, no-transform',
+    //     // While behind nginx, event stream should not be buffered:
+    //     // http://nginx.org/docs/http/ngx_http_proxy_module.html#proxy_buffering
+    //     'X-Accel-Buffering': 'no',
+    //   };
 
-      var isHttp1 = !(parseInt(req.httpVersion) >= 2);
-      if (isHttp1) {
-        req.socket.setKeepAlive(true);
-        Object.assign(headers, {
-          Connection: 'keep-alive',
-        });
-      }
+      //var isHttp1 = !(parseInt(req.httpVersion) >= 2);
+      //if (isHttp1) {
+        //ws.setKeepAlive(true);
+        // Object.assign(headers, {
+        //   Connection: 'keep-alive',
+        // });
+      //}
 
-      res.writeHead(200, headers);
-      res.write('\n');
+      //res.writeHead(200, headers);
+      //res.write('\n');
       var id = clientId++;
-      clients[id] = res;
-      req.on('close', function() {
-        if (!res.finished) res.end();
+      clients[id] = ws;
+      ws.on('close', function() {
+        //if (!res.finished) res.end();
         delete clients[id];
       });
     },
     publish: function(payload) {
       everyClient(function(client) {
-        client.write('data: ' + JSON.stringify(payload) + '\n\n');
+        client.send(JSON.stringify(payload));
       });
     },
   };

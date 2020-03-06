@@ -22,12 +22,10 @@ if (__resourceQuery) {
 
 if (typeof window === 'undefined') {
   // do nothing
-} else if (typeof window.EventSource === 'undefined') {
+} else if (typeof window.WebSocket === 'undefined') {
   console.warn(
-    "webpack-hot-middleware's client requires EventSource to work. " +
-      'You should include a polyfill if you want to support this browser: ' +
-      'https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events#Tools'
-  );
+    "webpack-hot-middleware's client requires WebSocket to work. "  
+    );
 } else {
   if (options.autoConnect) {
     connect();
@@ -85,7 +83,7 @@ function EventSourceWrapper() {
   }, options.timeout / 2);
 
   function init() {
-    source = new window.EventSource(options.path);
+    source = new window.WebSocket(`wss://${window.location.host}${options.path}`);
     source.onopen = handleOnline;
     source.onerror = handleDisconnect;
     source.onmessage = handleMessage;
