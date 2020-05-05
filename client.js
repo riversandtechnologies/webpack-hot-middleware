@@ -24,8 +24,8 @@ if (typeof window === 'undefined') {
   // do nothing
 } else if (typeof window.WebSocket === 'undefined') {
   console.warn(
-    "webpack-hot-middleware's client requires WebSocket to work. "  
-    );
+    "webpack-hot-middleware's client requires WebSocket to work. "
+  );
 } else {
   if (options.autoConnect) {
     connect();
@@ -76,7 +76,7 @@ function EventSourceWrapper() {
   var listeners = [];
 
   init();
-  var timer = setInterval(function() {
+  var timer = setInterval(function () {
     if (new Date() - lastActivity > options.timeout) {
       handleDisconnect();
     }
@@ -108,7 +108,7 @@ function EventSourceWrapper() {
   }
 
   return {
-    addMessageListener: function(fn) {
+    addMessageListener: function (fn) {
       listeners.push(fn);
     },
   };
@@ -174,7 +174,7 @@ function createReporter() {
   var previousProblems = null;
   function log(type, obj) {
     var newProblems = obj[type]
-      .map(function(msg) {
+      .map(function (msg) {
         return strip(msg);
       })
       .join('\n');
@@ -203,10 +203,10 @@ function createReporter() {
   }
 
   return {
-    cleanProblemsCache: function() {
+    cleanProblemsCache: function () {
       previousProblems = null;
     },
-    problems: function(type, obj) {
+    problems: function (type, obj) {
       if (options.warn) {
         log(type, obj);
       }
@@ -219,10 +219,10 @@ function createReporter() {
       }
       return true;
     },
-    success: function() {
+    success: function () {
       if (overlay) overlay.clear();
     },
-    useCustomOverlay: function(customOverlay) {
+    useCustomOverlay: function (customOverlay) {
       overlay = customOverlay;
     },
   };
@@ -236,10 +236,13 @@ function processMessage(obj) {
   switch (obj.action) {
     case 'building':
       if (options.log) {
+        if (window.hmrBuilding) {
+          window.hmrBuilding()
+        }
         console.log(
           '[HMR] bundle ' +
-            (obj.name ? "'" + obj.name + "' " : '') +
-            'rebuilding'
+          (obj.name ? "'" + obj.name + "' " : '') +
+          'rebuilding'
         );
       }
       break;
@@ -247,10 +250,10 @@ function processMessage(obj) {
       if (options.log) {
         console.log(
           '[HMR] bundle ' +
-            (obj.name ? "'" + obj.name + "' " : '') +
-            'rebuilt in ' +
-            obj.time +
-            'ms'
+          (obj.name ? "'" + obj.name + "' " : '') +
+          'rebuilt in ' +
+          obj.time +
+          'ms'
         );
       }
     // fall through
