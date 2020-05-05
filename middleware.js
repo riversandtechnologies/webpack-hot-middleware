@@ -10,7 +10,7 @@ function webpackHotMiddleware(compiler, opts) {
   opts.path = opts.path || '/__webpack_hmr';
   opts.heartbeat = opts.heartbeat || 10 * 1000;
 
-  var eventStream = createEventStream(opts.heartbeat);
+  var eventStream = createEventStream(opts.heartbeat, compiler.broadcast);
   var latestStats = null;
   var closed = false;
 
@@ -33,7 +33,7 @@ function webpackHotMiddleware(compiler, opts) {
     latestStats = statsResult;
     publishStats('built', latestStats, eventStream, opts.log);
   }
-  var middleware = function(ws, next) {
+  var middleware = function (ws, next) {
     if (closed) return;
     //if (!pathMatch(req.url, opts.path)) return next();
     eventStream.handler(ws);
@@ -43,11 +43,11 @@ function webpackHotMiddleware(compiler, opts) {
       publishStats('sync', latestStats, eventStream);
     }
   };
-  middleware.publish = function(payload) {
+  middleware.publish = function (payload) {
     if (closed) return;
     eventStream.publish(payload);
   };
-  middleware.close = function() {
+  middleware.close = function () {
     if (closed) return;
     // Can't remove compiler plugins, so we just set a flag and noop if closed
     // https://github.com/webpack/tapable/issues/32#issuecomment-350644466
@@ -58,58 +58,60 @@ function webpackHotMiddleware(compiler, opts) {
   return middleware;
 }
 
-function createEventStream(heartbeat) {
+function createEventStream(heartbeat, broadcast) {
   var clientId = 0;
   var clients = {};
   function everyClient(fn) {
-    Object.keys(clients).forEach(function(id) {
+    Object.keys(clients).forEach(function (id) {
       fn(clients[id]);
     });
   }
   var interval = setInterval(function heartbeatTick() {
-    everyClient(function(client) { 
-      client.send('\uD83D\uDC93');
-    });
+    //everyClient(function(client) {
+    broadcast.pub.publish(broadcast.channel, '\uD83D\uDC93')
+    //   client.send('\uD83D\uDC93');
+    //});
   }, heartbeat).unref();
   return {
-    close: function() {
+    close: function () {
       clearInterval(interval);
-      everyClient(function(client) {
+      everyClient(function (client) {
         if (!client.finished) client.close();
       });
       clients = {};
     },
-    handler: function(ws) {
-    //   var headers = {
-    //     'Access-Control-Allow-Origin': '*',
-    //     'Content-Type': 'text/event-stream;charset=utf-8',
-    //     'Cache-Control': 'no-cache, no-transform',
-    //     // While behind nginx, event stream should not be buffered:
-    //     // http://nginx.org/docs/http/ngx_http_proxy_module.html#proxy_buffering
-    //     'X-Accel-Buffering': 'no',
-    //   };
+    handler: function (ws) {
+      //   var headers = {
+      //     'Access-Control-Allow-Origin': '*',
+      //     'Content-Type': 'text/event-stream;charset=utf-8',
+      //     'Cache-Control': 'no-cache, no-transform',
+      //     // While behind nginx, event stream should not be buffered:
+      //     // http://nginx.org/docs/http/ngx_http_proxy_module.html#proxy_buffering
+      //     'X-Accel-Buffering': 'no',
+      //   };
 
       //var isHttp1 = !(parseInt(req.httpVersion) >= 2);
       //if (isHttp1) {
-        //ws.setKeepAlive(true);
-        // Object.assign(headers, {
-        //   Connection: 'keep-alive',
-        // });
+      //ws.setKeepAlive(true);
+      // Object.assign(headers, {
+      //   Connection: 'keep-alive',
+      // });
       //}
 
       //res.writeHead(200, headers);
       //res.write('\n');
       var id = clientId++;
       clients[id] = ws;
-      ws.on('close', function() {
+      ws.on('close', function () {
         //if (!res.finished) res.end();
         delete clients[id];
       });
     },
-    publish: function(payload) {
-      everyClient(function(client) {
-        client.send(JSON.stringify(payload));
-      });
+    publish: function (payload) {
+      broadcast.pub.publish(broadcast.channel, JSON.stringify(payload))
+      //everyClient(function (client) {
+      //client.send(JSON.stringify(payload));
+      //});
     },
   };
 }
@@ -125,7 +127,7 @@ function publishStats(action, statsResult, eventStream, log) {
   });
   // For multi-compiler, stats will be an object with a 'children' array of stats
   var bundles = extractBundles(stats);
-  bundles.forEach(function(stats) {
+  bundles.forEach(function (stats) {
     var name = stats.name || '';
 
     // Fallback to compilation name in case of 1 bundle (if it exists)
@@ -136,11 +138,11 @@ function publishStats(action, statsResult, eventStream, log) {
     if (log) {
       log(
         'webpack built ' +
-          (name ? name + ' ' : '') +
-          stats.hash +
-          ' in ' +
-          stats.time +
-          'ms'
+        (name ? name + ' ' : '') +
+        stats.hash +
+        ' in ' +
+        stats.time +
+        'ms'
       );
     }
     eventStream.publish({
@@ -168,7 +170,7 @@ function extractBundles(stats) {
 
 function buildModuleMap(modules) {
   var map = {};
-  modules.forEach(function(module) {
+  modules.forEach(function (module) {
     map[module.id] = module.name;
   });
   return map;
