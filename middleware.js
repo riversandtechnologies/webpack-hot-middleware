@@ -34,7 +34,7 @@ function webpackHotMiddleware(compiler, opts) {
     latestStats = statsResult;
     publishStats('built', latestStats, eventStream, opts.log);
     if (compiler.broadcast && compiler.broadcast.stateManager) {
-      compiler.broadcast.stateManager.set('pluginDeploymentStatus', 'completed');
+      compiler.broadcast.stateManager.set('state_addon-app-deployment-status', 'completed');
     }
   }
 
