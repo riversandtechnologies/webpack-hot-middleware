@@ -27,12 +27,17 @@ function webpackHotMiddleware(compiler, opts) {
     if (opts.log) opts.log('webpack building...');
     eventStream.publish({ action: 'building' });
   }
+
   function onDone(statsResult) {
     if (closed) return;
     // Keep hold of latest stats so they can be propagated to new clients
     latestStats = statsResult;
     publishStats('built', latestStats, eventStream, opts.log);
+    if (compiler.broadcast && compiler.broadcast.stateManager) {
+      compiler.broadcast.stateManager.set('pluginDeploymentStatus', 'completed');
+    }
   }
+
   var middleware = function (ws, next) {
     if (closed) return;
     //if (!pathMatch(req.url, opts.path)) return next();
